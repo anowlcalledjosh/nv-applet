@@ -127,7 +127,7 @@ class NVApplet(indicator_applet.Applet):
             self.schedule_update()
 
     def handle_switch_nvidia(self, source) -> None:
-        print("switching to nVidia graphics...")
+        print("switching to Nvidia graphics...")
         with self.lock:
             assert self.current_gpu is Gpu.INTEL, self.current_gpu
             subprocess.run(["nvctl", "gpu", "nvidia"], check=True)
