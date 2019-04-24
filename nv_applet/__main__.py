@@ -24,6 +24,20 @@ class Gpu(Enum):
     NVIDIA = object()
 
 
+GPU_NAMES = {
+    Gpu.INTEL: "Intel",
+    Gpu.NVIDIA: "nvidia",
+    None: "Unknown",
+}
+
+
+POWER_NAMES = {
+    PowerState.ON: "on",
+    PowerState.OFF: "off",
+    None: "unknown",
+}
+
+
 class NVApplet(indicator_applet.Applet):
 
     def __init__(self, *args) -> None:
@@ -46,23 +60,23 @@ class NVApplet(indicator_applet.Applet):
 
     def schedule_update(self) -> None:
         with self.lock:
-            process = subprocess.run(["nvctl", "gpu", "query"], stdout=subprocess.PIPE)
+            process = subprocess.run(["nvctl", "gpu", "query", "-q"], stdout=subprocess.PIPE)
             stdout = process.stdout.strip()
             if stdout == b"intel":
                 gpu = Gpu.INTEL
             elif stdout == b"nvidia":
                 gpu = Gpu.NVIDIA
             else:
-                raise NotImplementedError
+                gpu = None
 
-            process = subprocess.run(["nvctl", "power", "query"], stdout=subprocess.PIPE)
+            process = subprocess.run(["nvctl", "power", "query", "-q"], stdout=subprocess.PIPE)
             stdout = process.stdout.strip()
             if stdout == b"on":
                 state = PowerState.ON
             elif stdout == b"off":
                 state = PowerState.OFF
             else:
-                raise NotImplementedError
+                state = None
 
             self.current_gpu = gpu
             self.nvidia_power_state = state
@@ -72,19 +86,19 @@ class NVApplet(indicator_applet.Applet):
     def do_update(self, gpu: Gpu, state: PowerState) -> None:
         super().do_update()
 
-        self.items["status"].set_label("Status: " + {
-            (Gpu.INTEL, PowerState.OFF): "Power-saving mode",
-            (Gpu.INTEL, PowerState.ON): "Semi-power-saving mode",
-            (Gpu.NVIDIA, PowerState.OFF): "\"Can't happen\" mode",
-            (Gpu.NVIDIA, PowerState.ON): "Performance mode",
-        }[gpu, state])
+        label = f"GPU: {GPU_NAMES[self.current_gpu]}"
+        if self.current_gpu is Gpu.NVIDIA:
+            label += f" ({POWER_NAMES[self.nvidia_power_state]})"
+        self.items["status"].set_label(label)
 
         self.indicator.icon = "nv-applet-" + {
             Gpu.INTEL: "intel",
             Gpu.NVIDIA: "nvidia",
+            None: "cpu-frequency-indicator",
         }[self.current_gpu] + {
             PowerState.ON: "",
             PowerState.OFF: "-symbolic",
+            None: "",
         }[self.nvidia_power_state]
 
         if self.current_gpu is Gpu.INTEL:
@@ -94,7 +108,8 @@ class NVApplet(indicator_applet.Applet):
             self.items["switch_intel"].set_sensitive(True)
             self.items["switch_nvidia"].set_sensitive(False)
         else:
-            raise NotImplementedError
+            self.items["switch_intel"].set_sensitive(True)
+            self.items["switch_nvidia"].set_sensitive(True)
 
         if self.nvidia_power_state is PowerState.ON:
             self.items["gpu_on"].set_sensitive(False)
@@ -103,39 +118,40 @@ class NVApplet(indicator_applet.Applet):
             self.items["gpu_on"].set_sensitive(True)
             self.items["gpu_off"].set_sensitive(False)
         else:
-            raise NotImplementedError
+            self.items["gpu_on"].set_sensitive(True)
+            self.items["gpu_off"].set_sensitive(True)
 
     def handle_gpu_on(self, source) -> None:
         print("turning GPU on...")
         with self.lock:
             assert self.nvidia_power_state is PowerState.OFF, self.nvidia_power_state
-            subprocess.run(["nvctl", "power", "on"], check=True)
+            subprocess.run(["nvctl", "power", "on", "-q"], check=True)
             self.schedule_update()
 
     def handle_gpu_off(self, source) -> None:
         print("turning GPU off...")
         with self.lock:
             assert self.nvidia_power_state is PowerState.ON, self.nvidia_power_state
-            subprocess.run(["nvctl", "power", "off"], check=True)
+            subprocess.run(["nvctl", "power", "off", "-q"], check=True)
             self.schedule_update()
 
     def handle_switch_intel(self, source) -> None:
         print("switching to Intel graphics...")
         with self.lock:
             assert self.current_gpu is Gpu.NVIDIA, self.current_gpu
-            subprocess.run(["nvctl", "gpu", "intel"], check=True)
+            subprocess.run(["nvctl", "gpu", "intel", "-q"], check=True)
             self.schedule_update()
 
     def handle_switch_nvidia(self, source) -> None:
         print("switching to Nvidia graphics...")
         with self.lock:
             assert self.current_gpu is Gpu.INTEL, self.current_gpu
-            subprocess.run(["nvctl", "gpu", "nvidia"], check=True)
+            subprocess.run(["nvctl", "gpu", "nvidia", "-q"], check=True)
             self.schedule_update()
 
 
 def main():
-    NVApplet("nv-applet", "cpu-frequency-indicator", indicator_applet.Category.HARDWARE, Path(".").resolve().as_posix()).run()
+    NVApplet("nv-applet", "cpu-frequency-indicator", indicator_applet.Category.HARDWARE, Path("/home/josh/src/nv-applet/").resolve().as_posix()).run()
 
 
 if __name__ == "__main__":
