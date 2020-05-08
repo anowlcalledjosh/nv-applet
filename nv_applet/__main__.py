@@ -8,6 +8,7 @@ import subprocess
 import threading
 
 import gi
+
 gi.require_version("Gtk", "3.0")
 
 from gi.repository import GLib, Gtk
@@ -39,7 +40,6 @@ POWER_NAMES = {
 
 
 class NVApplet(indicator_applet.Applet):
-
     def __init__(self, *args) -> None:
         super().__init__(*args)
         self.items = collections.OrderedDict(
@@ -57,10 +57,13 @@ class NVApplet(indicator_applet.Applet):
         self.current_gpu = None
         self.nvidia_power_state = None
         self.lock = threading.RLock()
+        self.update_interval = 10
 
     def schedule_update(self) -> None:
         with self.lock:
-            process = subprocess.run(["nvctl", "gpu", "query", "-q"], stdout=subprocess.PIPE)
+            process = subprocess.run(
+                ["nvctl", "gpu", "query", "-q"], stdout=subprocess.PIPE
+            )
             stdout = process.stdout.strip()
             if stdout == b"intel":
                 gpu = Gpu.INTEL
@@ -69,7 +72,9 @@ class NVApplet(indicator_applet.Applet):
             else:
                 gpu = None
 
-            process = subprocess.run(["nvctl", "power", "query", "-q"], stdout=subprocess.PIPE)
+            process = subprocess.run(
+                ["nvctl", "power", "query", "-q"], stdout=subprocess.PIPE
+            )
             stdout = process.stdout.strip()
             if stdout == b"on":
                 state = PowerState.ON
@@ -91,15 +96,17 @@ class NVApplet(indicator_applet.Applet):
             label += f" ({POWER_NAMES[self.nvidia_power_state]})"
         self.items["status"].set_label(label)
 
-        self.indicator.icon = "nv-applet-" + {
-            Gpu.INTEL: "intel",
-            Gpu.NVIDIA: "nvidia",
-            None: "cpu-frequency-indicator",
-        }[self.current_gpu] + {
-            PowerState.ON: "",
-            PowerState.OFF: "-symbolic",
-            None: "",
-        }[self.nvidia_power_state]
+        self.indicator.icon = (
+            "nv-applet-"
+            + {
+                Gpu.INTEL: "intel",
+                Gpu.NVIDIA: "nvidia",
+                None: "cpu-frequency-indicator",
+            }[self.current_gpu]
+            + {PowerState.ON: "", PowerState.OFF: "-symbolic", None: "",}[
+                self.nvidia_power_state
+            ]
+        )
 
         if self.current_gpu is Gpu.INTEL:
             self.items["switch_intel"].set_sensitive(False)
@@ -151,7 +158,12 @@ class NVApplet(indicator_applet.Applet):
 
 
 def main():
-    NVApplet("nv-applet", "cpu-frequency-indicator", indicator_applet.Category.HARDWARE, Path("/home/josh/src/nv-applet/").resolve().as_posix()).run()
+    NVApplet(
+        "nv-applet",
+        "cpu-frequency-indicator",
+        indicator_applet.Category.HARDWARE,
+        Path("/home/ash/src/nv-applet/").resolve().as_posix(),
+    ).run()
 
 
 if __name__ == "__main__":

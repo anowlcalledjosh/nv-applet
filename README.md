@@ -12,8 +12,18 @@ Dependencies:
 - [indicator-applet][]
 - [nvctl][]
 
-[indicator-applet]: https://github.com/anowlcalledjosh/indicator-applet
-[nvctl]: https://github.com/anowlcalledjosh/nvctl
+[indicator-applet]: https://github.com/sersorrel/indicator-applet
+[nvctl]: https://github.com/sersorrel/nvctl
+
+You will also need to supply the icons yourself; previous versions of
+nv-applet have used the icon `cpu-frequency-indicator` from [Paper
+Icons][paper] and the icons from `usr/lib/nvidia-power-indicator/icons`
+in [NVIDIA Power Indicator][n-p-i] (replace `nvidia-power-indicator`
+with `nv-applet` in the filenames). These icons can't be supplied with
+newer versions of nv-applet for licensing reasons.
+
+[paper]: http://snwh.org/paper/icons
+[n-p-i]: https://github.com/andrebrait/nvidia-power-indicator
 
 Note: if you're using the `python3-gi` package and are installing
 nv-applet into a virtualenv, you'll need to use `--system-site-packages`
@@ -31,15 +41,6 @@ bug in nv-applet.
 
 Please do!
 
-## License
+## Copyright
 
-GPLv3+
-
-The icon `cpu-frequency-indicator` is from [Paper Icons][paper], which
-is licensed under CC BY-SA-4.0.
-
-The Intel and Nvidia icons are from [NVIDIA Power Indicator][n-p-i],
-which is licensed under GPLv3.
-
-[paper]: http://snwh.org/paper/icons
-[n-p-i]: https://github.com/andrebrait/nvidia-power-indicator
+Copyright © 2019 Ash Holland. Licensed under the EUPL (1.2 or later).
